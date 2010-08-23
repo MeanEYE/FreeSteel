@@ -27,16 +27,6 @@ happy to receive patches to fix bugs or add new features.
 KNOWN BUGS
 ==========
 
-Portrait photo is not properly extracted. Data is located in DF 02 0f 06 and
-according to CelikAPI reference it should be in JPEG format. There are several
-small nearly indentical JPEG headers (FF D8 FF E0 00 10 4A 46 49 46) separated
-by 10 01 BD 1B 4-byte word. On my eID I have 6 of those small headers, all 254
-bytes in size and one larger blob of 5607 bytes. When dumped to file there is
-some gray noise in the larger file with image size that looks OK. Small blobs
-can not open in Eye of Gnome viewer. I tried to compare the format to a known
-JPEG file in hex editor, but as I do not know how to read JPEG format all I can
-confirm is that there are no significant differences.
-
 PDF report feature is not implemented.
 
 
