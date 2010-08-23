@@ -257,7 +257,10 @@ def main():
       # Select df_02_0f_04
       data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x04])
       fdata, flabels = eid_split_fields(data)
-      print "Street address :", "%s, %s/%s" % (b2u(fdata[3]), b2u(fdata[4]), b2u(fdata[5]))
+      if len(fdata) == 5:
+        print "Street address :", "%s, %s" % (b2u(fdata[3]), b2u(fdata[4]))
+      else:
+        print "Street address :", "%s, %s/%s" % (b2u(fdata[3]), b2u(fdata[4]), b2u(fdata[5]))
       print "City           :", "%s, %s, %s" % (b2u(fdata[1]), b2u(fdata[2]), b2u(fdata[0]))
         
       if photo or dump:
