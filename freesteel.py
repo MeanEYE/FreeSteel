@@ -105,8 +105,7 @@ def card_transmit(hcard, dwActiveProtocol, *data):
     raise Exception('Failed to transmit: ' + SCardGetErrorMessage(hresult))
 
   if debug: print "<", smartcard.util.toHexString(response)
-  # strip 0x90 0x00 off the end
-  return response[:-2]
+  return response
 
 def eid_read_df(hcard, dwActiveProtocol, df):
   # select df, ignore security info reply (read 1byte + 0x90 0x00)
@@ -128,7 +127,7 @@ def eid_read_df(hcard, dwActiveProtocol, df):
     filename = "df_%s.bin" % smartcard.util.toHexString(df).replace(' ', '_')
     dump_bin_string(os.path.join(dump, filename), data)
 
-  return data
+  return data[:-2]
 
 def eid_split_fields(data):
   flabels = []
@@ -232,7 +231,7 @@ def main():
       # Start communication, send GET DATA header
       r = card_transmit(hcard, dwActiveProtocol, cmd['GET_DATA_0101'])
       header = smartcard.util.toHexString(r, smartcard.util.PACK)
-      print "Header field   :", header
+      print "Header field   :", header[:-4]
       print "Printed number :", " "*17, header[18:32]
 
       # Select df_02_0f_02
