@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# FreeSteel 0.1 (a very early release)
+# FreeSteel 0.2
 #
 # Copyright (c) 2010 Goran Rakic <grakic@devbase.net>.
 #
@@ -26,7 +26,7 @@ from smartcard.scard import *
 import smartcard.util
 import sys, os, getopt, string
 
-VERSION = "0.1 (a very early release)"
+VERSION = "0.2"
 
 def usage():
   print """
@@ -91,7 +91,7 @@ def card_disconnect(hcard):
 cmd = {
   'GET_DATA_0101' : [0x00, 0xCA, 0x01, 0x01, 0x20], # > GET_DATA_0101
   'SELECT_FILE_DF': [0x00, 0xA4, 0x08, 0x00],       # > SELECT_FILE_DF, file_path
-  'READ_BINARY'   : [0x00, 0xB0, 0x00]              # > READ_BINARY, byte_offset, byte_length
+  'READ_BINARY'   : [0x00, 0xB0]                    # > READ_BINARY, 2 bytes byte_offset, byte_length
 }
 
 def card_transmit(hcard, dwActiveProtocol, *data):
@@ -105,14 +105,15 @@ def card_transmit(hcard, dwActiveProtocol, *data):
     raise Exception('Failed to transmit: ' + SCardGetErrorMessage(hresult))
 
   if debug: print "<", smartcard.util.toHexString(response)
-  return response  
+  return response[:-2]
 
-def eid_read_df(hcard, dwActiveProtocol, df):
+def eid_read_df(hcard, dwActiveProtocol, df,eee=1):
   # select df, ignore security info reply (read 1byte + 0x90 0x00)
   card_transmit(hcard, dwActiveProtocol, cmd['SELECT_FILE_DF'], df, [0x01])
 
   # read first 6 bytes to get df len as 16bit LE integer at 4B offset
-  r = card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [0x00, 0x06])
+  r = card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [0x00, 0x00, 0x06])
+  #print r
   df_len = r[4]+r[5]*256 + 6
 
   data = []
@@ -120,14 +121,14 @@ def eid_read_df(hcard, dwActiveProtocol, df):
   while df_off < df_len:
     limit = df_len - df_off
     if limit > 0xff: limit = 0xff
-    data.extend(card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [df_off, limit]))
+    data.extend(card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [df_off>>8, df_off&0xff, limit]))
     df_off += limit
 
   if dump:
     filename = "df_%s.bin" % smartcard.util.toHexString(df).replace(' ', '_')
     dump_bin_string(os.path.join(dump, filename), data)
 
-  return data[:-2]
+  return data
 
 def eid_split_fields(data):
   flabels = []
@@ -231,7 +232,7 @@ def main():
       # Start communication, send GET DATA header
       r = card_transmit(hcard, dwActiveProtocol, cmd['GET_DATA_0101'])
       header = smartcard.util.toHexString(r, smartcard.util.PACK)
-      print "Header field   :", header[:-4]
+      print "Header field   :", header
       print "Printed number :", " "*17, header[18:32]
 
       # Select df_02_0f_02
@@ -257,29 +258,23 @@ def main():
       # Select df_02_0f_04
       data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x04])
       fdata, flabels = eid_split_fields(data)
-      if len(fdata) == 5:
-        print "Street address :", "%s, %s" % (b2u(fdata[3]), b2u(fdata[4]))
-      else:
-        print "Street address :", "%s, %s/%s" % (b2u(fdata[3]), b2u(fdata[4]), b2u(fdata[5]))
-      print "City           :", "%s, %s, %s" % (b2u(fdata[1]), b2u(fdata[2]), b2u(fdata[0]))
-        
+
+      residence  = "%s, %s, %s" % (b2u(fdata[1]), b2u(fdata[2]), b2u(fdata[0]))
+      if len(fdata) > 3:
+        residence = string.join([b2u(d) for d in fdata[3:]], ', ')+"\n"+" "*17+residence
+      print "Residence      :", residence
+
       if photo or dump:
         # Select df_02_0f_06
         data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x06])
 
       if photo:
-        photos = b2a(data).split(b2a([0x10, 0x01, 0xBD, 0x1B]))
-        largest = 0
-        for i in xrange(1, len(photos)):
-          if len(photos[i]) > len(photos[largest]):
-            largest = i
-
         if not photo_filename:
           filename = jmbg+".jpg"
         else:
           filename = photo_filename
         f = open(filename, "wb+")
-        f.write(photos[largest])
+        f.write(b2a(data[4:]))
         f.close()
 
     finally:
