@@ -341,6 +341,9 @@ def main():
         for n in (files['PHOTO'], files['QUALIFIED'], files['STANDARD']):
           eid_read_ef(hcard, dwActiveProtocol, n, dump_directory)
 
+      # Do not trust the JMBG
+      jmbg = os.path.basename(jmbg)
+
       if photo:
         # Select EF path 0f 06
         if not photo_filename: filename = jmbg+".jpg"
