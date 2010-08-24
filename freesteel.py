@@ -105,7 +105,12 @@ def card_transmit(hcard, dwActiveProtocol, *data):
     raise Exception('Failed to transmit: ' + SCardGetErrorMessage(hresult))
 
   if debug: print "<", smartcard.util.toHexString(response)
-  # strip 0x90 0x00 off the end
+
+  # Check for 0x90 0x00 (all OK) confirmation
+  check = response[len(response)-2:]
+  if check != [0x90, 0x00]:
+    raise Exception('Request error: Returned ' + smartcard.util.toHexString(check))
+
   return response[:-2]
 
 def eid_read_df(hcard, dwActiveProtocol, df):
