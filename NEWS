@@ -1,0 +1,49 @@
+
+FreeSteel release 0.3
+---------------------
+* New features
+
+- Extract personal X.509 (public) personal certificates
+  Use the -q or --qualified argument to extract personal certificate for
+  qualified digital signatures and -s or --standard to extract the other
+  certificate stored on the smart card. You can pass the file name as the next
+  argument or <JMBG>_q.cer and <JMBG>_u.cer will be used as default where
+  <JMBG> is the personal number stored on the eID.
+
+- Added --silent option that can be used with extract files options when
+  filenames are specified at the command line to skip reading other data from
+  the eID card.
+
+FreeSteel release 0.2
+---------------------
+* New features
+
+- Photo extraction now works
+  Use the -p or --photo argument to extract the photo stored on the eID. You
+  can pass the file name as the next argument or <JMBG>.jpg will be used as
+  default where <JMBG> is the personal number stored on the eID.
+
+- Place of residence address can have variable fields count
+  Fields like appartment number or building floor number are optional.
+  FreeSteel will not crash when reading eID without the address details.
+
+* Bugs fixed
+
+- Read binary offset length bug
+  commit: 48671038ba5223a9f699527d3d1eaecdfa5528df
+          Zeljko Stevanovic <admin@zsteva.ath.cx>
+
+- Ending OK bytes (0x90 0x00) stripping bug
+  commit: fafb162a5deddcacbc05a2afbd0ec6eb968e45df
+          Goran Rakic <grakic@devbase.net>
+
+- Place of residence fields count bug
+  commit: 1a5d5f3125ce4259ebd6408d5d2e3935866029bd
+          Zeljko Stevanovic <admin@zsteva.ath.cx>
+          48671038ba5223a9f699527d3d1eaecdfa5528df
+          Goran Rakic <grakic@devbase.net>
+
+FreeSteel release 0.1 (a very early release)
+--------------------------------------------
+* Initial release
+

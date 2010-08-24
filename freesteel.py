@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# FreeSteel 0.2
+# FreeSteel 0.3
 #
 # Copyright (c) 2010 Goran Rakic <grakic@devbase.net>.
 #
@@ -26,7 +26,7 @@ from smartcard.scard import *
 import smartcard.util
 import sys, os, getopt, string
 
-VERSION = "0.2"
+VERSION = "0.3"
 
 def usage():
   print """

@@ -39,7 +39,8 @@ operating system. You will need Python and PC/SC support for your platform.
 There is one more dependancy, the pyscard package, a Python wrappers for PC/SC.
 Install it from the repository or download from http://pyscard.sourceforge.net
 
-Windows has native PC/SC support, but you may need the driver for your reader.
+Windows has a native PC/SC support, but you may need the to install driver for
+your reader.
 
 GNU/Linux users can use pcsc-lite by Ludovic Rousseau that should be available
 for all distributions. Smart card reader need to be supported by pcsc-lite by
@@ -63,7 +64,9 @@ your reader installed and working properly:
 
 MacOS X is supported by a port of pcsc-lite, installed by default. Again, you
 may need the driver for your smart card reader or it may work with one of the
-drivers already bundled with the system.
+drivers already bundled with the system. Most USB readers should work with the
+CCID driver installed by default. There is a tool pcsctest you can run from the
+terminal to see if you reader is recognized.
 
 
 DEVELOPMENT
@@ -79,8 +82,7 @@ package by Christian Amsüss: http://christian.amsuess.com/tools/carddecoders/
 Smart cards are defined in ISO 7816 standards, with ISO 7816-4 defining
 commands for communications with the ISO 7816-compatible smart card. You need
 to buy those from ISO, but an overview (and a must read) can be found at:
-http://www.ttfn.net/techno/smartcards/iso7816_4.html  
+http://www.cardwerk.com/smartcards/smartcard_standard_ISO7816-4.aspx
 
 There is a nice list of standard APDUs at http://cheef.ru/docs/HowTo/APDU.info
-
 
