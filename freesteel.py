@@ -45,7 +45,7 @@ Usage: %s [option]... where option can be one of:
                             photo. If the filename is not specified, <JMBG>.pdf
                             will be used (THE FEATURE IS NOT IMPLEMENTED!)
 
-  -d, --dump=DIRECTORY      Dump DF binary data into the directory
+  -d, --dump=DIRECTORY      Dump EF binary data into the directory
   -v, --verbose             Output sent and received data to stderr
 
       --help                Display this message
@@ -89,9 +89,9 @@ def card_disconnect(hcard):
 
 # APDU commands for Serbian eID
 cmd = {
-  'GET_DATA_0101' : [0x00, 0xCA, 0x01, 0x01, 0x20], # > GET_DATA_0101
-  'SELECT_FILE_DF': [0x00, 0xA4, 0x08, 0x00],       # > SELECT_FILE_DF, file_path
-  'READ_BINARY'   : [0x00, 0xB0]                    # > READ_BINARY, 2 bytes byte_offset, byte_length
+  'GET_DATA_0101'   : [0x00, 0xCA, 0x01, 0x01, 0x20], # > GET_DATA_0101
+  'SELECT_FILE_PATH': [0x00, 0xA4, 0x08, 0x00],       # > SELECT_FILE_PATH, file_path
+  'READ_BINARY'     : [0x00, 0xB0]                    # > READ_BINARY, 2 bytes byte_offset, byte_length
 }
 
 def card_transmit(hcard, dwActiveProtocol, *data):
@@ -113,25 +113,25 @@ def card_transmit(hcard, dwActiveProtocol, *data):
 
   return response[:-2]
 
-def eid_read_df(hcard, dwActiveProtocol, df):
-  # select df, ignore security info reply (read 1byte + 0x90 0x00)
-  card_transmit(hcard, dwActiveProtocol, cmd['SELECT_FILE_DF'], df, [0x01])
+def eid_read_ef(hcard, dwActiveProtocol, ef_path):
+  # select, ignore security info reply (read 1byte + 0x90 0x00)
+  card_transmit(hcard, dwActiveProtocol, cmd['SELECT_FILE_PATH'], ef_path, [0x01])
 
-  # read first 6 bytes to get df len as 16bit LE integer at 4B offset
+  # read first 6 bytes to get ef len as 16bit LE integer at 4B offset
   r = card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [0x00, 0x00, 0x06])
   #print r
-  df_len = r[4]+r[5]*256 + 6
+  ef_len = r[4]+r[5]*256 + 6
 
   data = []
-  df_off = 6
-  while df_off < df_len:
-    limit = df_len - df_off
+  ef_off = 6
+  while ef_off < ef_len:
+    limit = ef_len - ef_off
     if limit > 0xff: limit = 0xff
-    data.extend(card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [df_off>>8, df_off&0xff, limit]))
-    df_off += limit
+    data.extend(card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [ef_off>>8, ef_off&0xff, limit]))
+    ef_off += limit
 
   if dump:
-    filename = "df_%s.bin" % smartcard.util.toHexString(df).replace(' ', '_')
+    filename = "ef_%s.bin" % smartcard.util.toHexString(ef_path).replace(' ', '_')
     dump_bin_string(os.path.join(dump, filename), data)
 
   return data
@@ -241,16 +241,16 @@ def main():
       print "Header field   :", header
       print "Printed number :", " "*17, header[18:32]
 
-      # Select df_02_0f_02
-      data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x02])
+      # Select ef_02_0f_02
+      data = eid_read_ef(hcard, dwActiveProtocol, [0x02, 0x0F, 0x02])
       fdata, flabels = eid_split_fields(data)
       print "eID number     :", b2a(fdata[0])
       print "Issued         :", b2a(fdata[3])
       print "Valid          :", b2a(fdata[4])
       print "Issuer         :", b2u(fdata[5]), b2a(fdata[6])
 
-      # Select df_02_0f_03
-      data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x03])
+      # Select ef_02_0f_03
+      data = eid_read_ef(hcard, dwActiveProtocol, [0x02, 0x0F, 0x03])
       fdata, flabels = eid_split_fields(data)
       jmbg = b2a(fdata[0])
       print "JMBG           :", jmbg
@@ -261,8 +261,8 @@ def main():
       print "Place od birth :", "%s, %s, %s, %s" % (b2u(fdata[5]), b2u(fdata[6]), b2u(fdata[7]), b2u(fdata[9]))
       print "Date of birth  :", b2a(fdata[8])
 
-      # Select df_02_0f_04
-      data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x04])
+      # Select ef_02_0f_04
+      data = eid_read_ef(hcard, dwActiveProtocol, [0x02, 0x0F, 0x04])
       fdata, flabels = eid_split_fields(data)
 
       residence  = "%s, %s, %s" % (b2u(fdata[1]), b2u(fdata[2]), b2u(fdata[0]))
@@ -271,8 +271,8 @@ def main():
       print "Residence      :", residence
 
       if photo or dump:
-        # Select df_02_0f_06
-        data = eid_read_df(hcard, dwActiveProtocol, [0x02, 0x0F, 0x06])
+        # Select ef_02_0f_06
+        data = eid_read_ef(hcard, dwActiveProtocol, [0x02, 0x0F, 0x06])
 
       if photo:
         if not photo_filename:
