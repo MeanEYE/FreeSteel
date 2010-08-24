@@ -150,7 +150,8 @@ def eid_read_ef(hcard, dwActiveProtocol, ef_path, dump_directory = None):
   if len(header) < 6:
     raise Exception('Request error: Could not read header from EF path ' + smartcard.util.toHexString(ef_path))
   
-  ef_len = header[4]+header[5]*256 + 6
+  # Total EF length: data as 16bit LE at 4B offset + 6 bytes header
+  ef_len = (header[5]<<8) + header[4] + 6
 
   data = []
   ef_off = 6
