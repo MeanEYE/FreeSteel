@@ -54,12 +54,12 @@ Usage: %s [option]... where option can be one of:
                            JMBG number read from the eID card.
 
   -q --qualified[=FILE]    Extract qualified public personal X.509 certificate
-                           Default filename is <JMBG>.jpg where JMBG is personal
-                           JMBG number read from the eID card.
+                           Default filename is <JMBG>_qualified.cer where JMBG
+                           is personal JMBG number read from the eID card.
 
   -s --standard[=FILE]     Extract standard public personal X.509 certificate
-                           Default filename is <JMBG>.jpg where JMBG is personal
-                           JMBG number read from the eID card.
+                           Default filename is <JMBG>_standard.cer where JMBG
+                           is personal JMBG number read from the eID card.
 
 
   Debug and informational options
@@ -307,7 +307,7 @@ def main():
       # Personal data
       read_personal = not silent or report
       # We still need jmbg from the personal details
-      if (photo and not photo_filename) or (qualified and not qualified_filename) or (standard and not qualified_standard):
+      if (photo and not photo_filename) or (qualified and not qualified_filename) or (standard and not qualified_filename):
         read_personal = True
 
       if read_personal:
