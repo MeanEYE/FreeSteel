@@ -147,6 +147,13 @@ def eid_read_ef(hcard, dwActiveProtocol, ef_path, dump_directory = None):
 
   # read first 6 bytes to get ef len as 16bit LE integer at 4B offset
   header = card_transmit(hcard, dwActiveProtocol, cmd['READ_BINARY'], [0x00, 0x00, 0x06])
+
+  # FIXME: empty efs have all FF bytes, including header. Probably the empty EF is signaled
+  # in SELECT FILE PATH response (up to 32 bytes) but this will work as a quickfix.
+  if header == [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]:
+    return []
+
+  # FIXME: Missing header? Probably non existing ef or no permissions to read. Again, a quickfix
   if len(header) < 6:
     raise Exception('Request error: Could not read header from EF path ' + smartcard.util.toHexString(ef_path))
   
@@ -167,7 +174,7 @@ def eid_read_ef(hcard, dwActiveProtocol, ef_path, dump_directory = None):
 
   return data
 
-def eid_split_fields(data):
+def eid_data_split_fields(data):
   flabels = []
   fdata = []
   
@@ -180,8 +187,7 @@ def eid_split_fields(data):
     i += 4+length
   return fdata, flabels
 
-def eid_extract_file(hcard, dwActiveProtocol, ef_path, filename, dump_directory = None):
-  data = eid_read_ef(hcard, dwActiveProtocol, ef_path, dump_directory)
+def eid_data_extract_file(data, filename):
   f = open(filename, "wb+")
   f.write(b2a(data[4:]))
   f.close()
@@ -298,7 +304,7 @@ def main():
 
         # Select EF path 0f 02
         data = eid_read_ef(hcard, dwActiveProtocol, files['DOCUMENT'], dump_directory)
-        fdata, flabels = eid_split_fields(data)
+        fdata, flabels = eid_data_split_fields(data)
         print "eID number     :", b2a(fdata[0])
         print "Issued         :", b2a(fdata[3])
         print "Valid          :", b2a(fdata[4])
@@ -313,7 +319,7 @@ def main():
       if read_personal:
         # Select EF path 0f 03
         data = eid_read_ef(hcard, dwActiveProtocol, files['PERSONAL'], dump_directory)
-        fdata, flabels = eid_split_fields(data)
+        fdata, flabels = eid_data_split_fields(data)
         jmbg = b2a(fdata[0])
         if not silent:
           print "JMBG           :", jmbg
@@ -329,7 +335,7 @@ def main():
       if not silent or report:
         # Select EF path 0f 04
         data = eid_read_ef(hcard, dwActiveProtocol, files['RESIDENCE'], dump_directory)
-        fdata, flabels = eid_split_fields(data)
+        fdata, flabels = eid_data_split_fields(data)
 
         residence  = "%s, %s, %s" % (b2u(fdata[1]), b2u(fdata[2]), b2u(fdata[0]))
         if len(fdata) > 3:
@@ -347,21 +353,30 @@ def main():
 
       if photo:
         # Select EF path 0f 06
+        data = eid_read_ef(hcard, dwActiveProtocol, files['PHOTO'], None)
         if not photo_filename: filename = jmbg+".jpg"
         else: filename = photo_filename
-        eid_extract_file(hcard, dwActiveProtocol, files['PHOTO'], filename, None)
+        eid_data_extract_file(data, filename)
 
       if qualified:
         # Select EF path 0f 08
-        if not qualified_filename: filename = jmbg+"_qualified.cer"
-        else: filename = qualified_filename
-        eid_extract_file(hcard, dwActiveProtocol, files['QUALIFIED'], filename, None)
+        data = eid_read_ef(hcard, dwActiveProtocol, files['QUALIFIED'], None)
+        if not data:
+          print >> sys.stderr, "Missing qualified certificate"
+        else:
+          if not qualified_filename: filename = jmbg+"_qualified.cer"
+          else: filename = qualified_filename
+          eid_data_extract_file(data, filename)
 
       if standard:
         # Select EF path 0f 10
-        if not standard_filename: filename = jmbg+"_standard.cer"
-        else: filename = standard_filename
-        eid_extract_file(hcard, dwActiveProtocol, files['STANDARD'], filename, None)
+        data = eid_read_ef(hcard, dwActiveProtocol, files['STANDARD'], None)
+        if not data:
+          print >> sys.stderr, "Missing standard certificate"
+        else:
+          if not standard_filename: filename = jmbg+"_standard.cer"
+          else: filename = standard_filename
+          eid_data_extract_file(data, filename)
 
     finally:
       card_disconnect(hcard)
