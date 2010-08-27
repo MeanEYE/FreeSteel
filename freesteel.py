@@ -327,8 +327,9 @@ def main():
           print "First name     :", b2u(fdata[2])
           print "Middle name    :", b2u(fdata[3])
           print "Gender         :", b2u(fdata[4])
-          print "Place od birth :", "%s, %s, %s, %s" % (b2u(fdata[5]), b2u(fdata[6]), b2u(fdata[7]), b2u(fdata[9]))
-          print "Date of birth  :", b2a(fdata[8])
+          # Community of birth is optional, ending is SRB, and before we have date of birth
+          print "Place od birth :", ', '.join([b2u(t) for t in fdata[5:len(fdata)-2]])
+          print "Date of birth  :", b2a(fdata[len(fdata)-2])
 
 
       # Place of residence data
