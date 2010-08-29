@@ -50,16 +50,18 @@ Usage: %s [option]... where option can be one of:
   Extract files options
 
   -p --photo[=FILE]        Copy the photo of the smart card
-                           Default filename is <JMBG>.jpg where JMBG is personal
-                           JMBG number read from the eID card.
+                           Default filename is <JMBG>.jpg where JMBG is a
+                           personal JMBG number read from the eID card.
 
   -q --qualified[=FILE]    Extract qualified public personal X.509 certificate
-                           Default filename is <JMBG>_qualified.cer where JMBG
-                           is personal JMBG number read from the eID card.
+                           This certificate can be used for non-repudiation
+                           signing. Default filename is <JMBG>_qualified.cer
+                           where JMBG is a personal JMBG number read from the
+                           eID card.
 
   -s --standard[=FILE]     Extract standard public personal X.509 certificate
                            Default filename is <JMBG>_standard.cer where JMBG
-                           is personal JMBG number read from the eID card.
+                           is a personal JMBG number read from the eID card.
 
 
   Debug and informational options
@@ -118,8 +120,8 @@ files = {
   'PERSONAL'  : [0x0F, 0x03],   # Personal data
   'RESIDENCE' : [0x0F, 0x04],   # Place of residence, variable length
   'PHOTO'     : [0x0F, 0x06],   # Personal photo in JPEG format
-  'QUALIFIED' : [0x0F, 0x08],   # Public X.509 certificate for qualified signing
-  'STANDARD'  : [0x0F, 0x10]    # Public X.509 certificate for standard signing
+  'QUALIFIED' : [0x0F, 0x10],   # Public X.509 certificate for qualified (Non Repudiation) signing
+  'STANDARD'  : [0x0F, 0x08]    # Public X.509 certificate for standard signing
 }
 
 def card_transmit(hcard, dwActiveProtocol, *data):
