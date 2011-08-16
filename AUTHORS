@@ -1,6 +1,17 @@
+FreeSteel, command line tool
+============================
+
 Copyright (c) 2010 Goran Rakic <grakic@devbase.net>.
--------------------------------------------------------
 
 Original developer:       Goran Rakic
   with contributions by   Zeljko Stevanovic <admin@zsteva.ath.cx>
+
+
+
+FreeSteel, python library
+=========================
+Code based of Java version of FreeSteel!
+
+Copyright (c) 2011. by Mladen Mijatov <meaneye.rcf@gmail.com>
+
 
