@@ -1,3 +1,24 @@
+#
+#		FreeSteel
+#		Card Implementation
+#
+#		Copyright (c) 2011. by Mladen Mijatov <meaneye.rcf@gmail.com>
+#
+#		This program is free software; you can redistribute it and/or modify
+#		it under the terms of the GNU General Public License as published by
+#		the Free Software Foundation; either version 3 of the License, or
+#		(at your option) any later version.
+#
+#		This program is distributed in the hope that it will be useful,
+#		but WITHOUT ANY WARRANTY; without even the implied warranty of
+#		MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#		GNU General Public License for more details.
+#
+#		You should have received a copy of the GNU General Public License
+#		along with this program; if not, write to the Free Software
+#		Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#		MA 02110-1301, USA.
+
 import smartcard.scard as scard
 
 from exceptions import GetDataError, SelectPathError, DisconnectCardError
@@ -22,8 +43,8 @@ class Card:
 
 		# get data from card
 		result, response = scard.SCardTransmit(
-										self._handle, 
-										self._protocol, 
+										self._handle,
+										self._protocol,
 										command
 									)
 
@@ -90,12 +111,12 @@ class Card:
 
 		# get header
 		header = self.read_binary(0, 6)
-		file_size = (header[5] << 8) + header[4] 
+		file_size = (header[5] << 8) + header[4]
 
 		# get data
 		data = self.read_binary(6, file_size)
 
-		return header, data	
+		return header, data
 
 	def disconnect(self):
 		"""Safely disconnect card"""
