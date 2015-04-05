@@ -8,8 +8,8 @@ FreeSteel is Python library for reading electronic (national) id cards.
 PDF report feature is not implemented.
 
 
-## REQUIREMENTS
-
+## Requirements
 
 FreeSteel is cross-platform, and should work on Linux, Windows and MacOS X
-operating system. You will need to have `pyscard` and `pcscd` installed.
+operating system. You will need to have `pyscard` and `pcscd` installed in order
+to access Smart Cards.
