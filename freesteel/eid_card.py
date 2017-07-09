@@ -21,7 +21,7 @@
 
 import smartcard.util as scard_util
 
-from card import Card, CardCommand as Command
+from card import CardCommand as Command
 
 
 class CardFile:
@@ -60,8 +60,8 @@ class PersonalField:
 
 class ResidenceField:
 	COUNTRY_CODE = 32
-	PLACE = 33
-	MUNICIPAL = 34
+	MUNICIPAL = 33
+	PLACE = 34
 	STREET = 35
 	NUMBER = 36
 
@@ -103,7 +103,7 @@ class EidCard:
 
 	def __get_fields_from_file(self, card_file):
 		"""Get fields from binary file and format them"""
-		header, data = self._card.read_file(card_file)
+		data = self._card.read_file(card_file)[1]
 		return self.__get_fields(data)
 
 	def get_data_0101(self):
@@ -125,9 +125,9 @@ class EidCard:
 		"""Get document owner's residence data from card"""
 		return self.__get_fields_from_file(CardFile.RESIDENCE)
 
-	def get_photo(self, filename=None):
+	def get_photo(self):
 		"""Return or save photo from electronic ID"""
-		header, data = self._card.read_file(CardFile.PHOTO)
+		data = self._card.read_file(CardFile.PHOTO)[1]
 		data = scard_util.toASCIIString(data[4:])
 
 		return data
