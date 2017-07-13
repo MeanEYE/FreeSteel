@@ -23,7 +23,6 @@ import smartcard.scard as scard
 
 from exceptions import GetDataError, SelectPathError, DisconnectCardError
 
-
 class CardCommand:
 	GET_DATA_0101 = [0x00, 0xCA, 0x01, 0x01, 0x20]
 	SELECT_PATH = [0x00, 0xA4, 0x08, 0x00]
@@ -43,10 +42,10 @@ class Card:
 
 		# get data from card
 		result, response = scard.SCardTransmit(
-										self._handle,
-										self._protocol,
-										command
-									)
+			self._handle,
+			self._protocol,
+			command
+		)
 
 		# raise error if needed
 		if result != scard.SCARD_S_SUCCESS:
@@ -68,10 +67,10 @@ class Card:
 
 		# transmit command to card
 		result, response = scard.SCardTransmit(
-										self._handle,
-										self._protocol,
-										request
-									)
+			self._handle,
+			self._protocol,
+			request
+		)
 
 		# raise error if needed
 		if result != scard.SCARD_S_SUCCESS:
@@ -84,6 +83,8 @@ class Card:
 	def read_binary(self, offset, limit):
 		"""Read binary data from card _after_ selecting path"""
 		data = []
+
+		limit = min(limit, 255)
 		end_position = offset + limit
 		current_position = offset
 
@@ -126,3 +127,74 @@ class Card:
 			# failed selecting path
 			message = scard.SCardGetErrorMessage(result)
 			raise DisconnectCardError('Error disconnecting card: {0}'.format(message))
+
+
+class GemaltoCard(Card):
+	CARD_AID = [
+		0xF3, 0x81, 0x00, 0x00, 0x02, 0x53, 0x45,
+		0x52, 0x49, 0x44, 0x01
+	]
+
+	def __init__(self, handle, protocol):
+		self._handle = handle
+		self._protocol = protocol
+
+		command = [0x00, 0xA4, 0x04, 0x00]
+		command.append(len(self.CARD_AID))
+		command.extend(self.CARD_AID)
+		command.append(0x00)
+		scard.SCardTransmit(
+			handle,
+			protocol,
+			command
+		)
+
+	def select_path(self, path, ne=4):
+		"""Select path on card"""
+		request = [0x00, 0xA4, 0x08, 0x00]
+		request.append(len(path))
+		request.extend(path)
+		request.append(ne)
+
+		# transmit command to card
+		result, response = scard.SCardTransmit(
+			self._handle,
+			self._protocol,
+			request
+		)
+
+		# raise error if needed
+		if result != scard.SCARD_S_SUCCESS:
+			# failed selecting path
+			message = scard.SCardGetErrorMessage(result)
+			raise SelectPathError('Error selecting path: {0}'.format(message))
+
+		return response
+
+	def read_file(self, card_file, strip_tag=False):
+		"""Select and read file from card"""
+		file_info = self.select_path(card_file, 4)
+
+		length = (file_info[2] << 8) + file_info[3]
+		offset = 0
+		known_real_length = False
+
+		output = []
+		while length > 0:
+			data = self.read_binary(offset, length)
+			if not known_real_length:
+				# get length from outher tag, skip first 4 bytes (outher tag + length)
+				# if strip_tag is true, skip 4 more bytes (inner tag + length) and return content
+				length = ((data[3])<<8) + (data[2]);
+				skip = 8 if strip_tag else 4
+				output = [char for char in data[skip:len(data)]]
+				#output.append(data[skip:len(data)-skip]);
+				known_real_length = True;
+			else:
+				output = [char for char in data[0: len(data)]]
+				#output.append(data[0: len(data)]);
+
+			offset += len(data)
+			length -= len(data)
+
+		return [], output

@@ -20,11 +20,24 @@
 #		MA 02110-1301, USA.
 
 import smartcard.scard as scard
-
-from card import Card
+from card import Card, GemaltoCard
 from threading import Thread
 from exceptions import GetContextError, ReleaseContextError, GetReaderListError
 from exceptions import ConnectCardError, GetReaderStatusError, EmptyReaderListError
+from smartcard import Session
+
+APOLLO_CARD_ATR = str([
+    0x3B, 0xB9, 0x18, 0x00, 0x81, 0x31, 0xFE,
+    0x9E, 0x80, 0x73, 0xFF, 0x61, 0x40, 0x83,
+    0x00, 0x00, 0x00, 0xDF
+])
+
+GEMALTO_CARD_ATR = str([
+    0x3B, 0xFF, 0x94, 0x00, 0x00, 0x81, 0x31,
+    0x80, 0x43, 0x80, 0x31, 0x80, 0x65, 0xB0,
+    0x85, 0x02, 0x01, 0xF3, 0x12, 0x0F, 0xFF,
+    0x82, 0x90, 0x00, 0x79
+])
 
 
 class Reader:
@@ -54,6 +67,17 @@ class Reader:
 		"""Get card interface"""
 		card = None
 
+		session = Session()
+		atr_str = str(session.getATR())
+		session.close()
+
+		if atr_str == APOLLO_CARD_ATR:
+			CardClass = Card
+		elif atr_str == GEMALTO_CARD_ATR:
+			CardClass = GemaltoCard
+		else:
+			raise ConnectCardError('Error connecting to card: UNKNOWN CARD')
+
 		# try connecting reader
 		result, self.__hcard, self.active_protocol = scard.SCardConnect(
 															self.context,
@@ -68,7 +92,7 @@ class Reader:
 
 		else:
 			# create card class and return it
-			card = Card(self.__hcard, self.active_protocol)
+			card = CardClass(self.__hcard, self.active_protocol)
 
 		return card
 
