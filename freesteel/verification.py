@@ -24,9 +24,10 @@ import urllib.request
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import ExtensionOID, NameOID
 
-from freesteel.exceptions import VerificationError
+from freesteel.exceptions import VerificationError, CertificateRevokedError
 
 # certificate on card proves nothing on its own, anyone can make one with
 # any name in it. it can be trusted only if it was signed by authority we
@@ -259,7 +260,7 @@ class Verifier:
 
 		# revoked certificates are listed by their serial numbers
 		if revocation_list.get_revoked_certificate_by_serial_number(certificate.serial_number) is not None:
-			raise VerificationError('Certificate {0} has been revoked'.format(name))
+			raise CertificateRevokedError('Certificate {0} has been revoked'.format(name))
 
 	def add_trusted_certificate(self, data):
 		"""Add certificate which is trusted without further checks, usually root authority"""
@@ -272,6 +273,14 @@ class Verifier:
 	def add_revocation_list(self, data):
 		"""Add list of certificates revoked by one of authorities"""
 		self._revocation_lists.append(load_revocation_list(data))
+
+	def get_chain(self, data):
+		"""Get DER encoded certificates leading from the given one to trusted one"""
+		# only signatures are checked here, use verify to find
+		# out if certificates in chain can actually be trusted
+		chain = self.__build_chain(load_certificate(data))
+
+		return [current.public_bytes(Encoding.DER) for current in chain]
 
 	def verify(self, data, check_revocation=True, moment=None):
 		"""Verify certificate and return its chain as names, raise error when it can't be trusted"""

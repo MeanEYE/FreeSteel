@@ -32,3 +32,4 @@ class ConnectCardError(Exception): pass
 class DisconnectCardError(Exception): pass
 
 class VerificationError(Exception): pass
+class CertificateRevokedError(VerificationError): pass

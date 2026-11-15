@@ -190,7 +190,7 @@ class Reader:
 			class_.context = class_.get_context()
 
 		# get list of readers
-		result, readers = scard.SCardListReaders(class_.get_context(), [])
+		result, readers = scard.SCardListReaders(class_.context, [])
 
 		if result != scard.SCARD_S_SUCCESS:
 			# failed to get reader list
@@ -237,6 +237,22 @@ class Reader:
 			callback(self, card)
 
 		return card
+
+	def wait_for_card_removal(self):
+		"""Wait for card to be removed from reader"""
+		# get reader status
+		current_state = [(self.name, scard.SCARD_STATE_UNAWARE)]
+		result, state = scard.SCardGetStatusChange(self.context, 0, current_state)
+
+		if result != scard.SCARD_S_SUCCESS:
+			# error getting reader status
+			message = scard.SCardGetErrorMessage(result)
+			raise GetReaderStatusError('Error getting reader state: {0}'.format(message))
+
+		if state[0][1] & scard.SCARD_STATE_PRESENT:
+			# card is in reader, wait for it to be taken out. this
+			# also returns when reader itself is disconnected
+			self.__wait_for_reader_status(state, scard.SCARD_STATE_EMPTY)
 
 	def wait_for_card_async(self, callback, protocol=None):
 		"""Wait for card to be inserted asynchronously
