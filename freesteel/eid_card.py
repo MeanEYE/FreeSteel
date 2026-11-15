@@ -21,7 +21,12 @@
 
 import smartcard.util as scard_util
 
-from card import CardCommand as Command
+from freesteel.card import Command, DataObject
+
+
+KEY_USAGE_IDENTIFIER = bytes([0x06, 0x03, 0x55, 0x1D, 0x0F])  # object identifier 2.5.29.15
+KEY_USAGE_CRITICAL = bytes([0x01, 0x01, 0xFF])
+KEY_USAGE_NON_REPUDIATION = 0x40
 
 
 class CardFile:
@@ -29,33 +34,42 @@ class CardFile:
 	PERSONAL = (0x0F, 0x03)  # Personal data
 	RESIDENCE = (0x0F, 0x04)  # Place of residence, variable length
 	PHOTO = (0x0F, 0x06)  # Personal photo in JPEG format
+
+	# certificates on Apollo cards, Gemalto cards keep them in cryptography application
 	CERT_QUALIFIED = (0x0F, 0x10)  # Public X.509 certificate for qualified (Non Repudiation) signing
 	CERT_STANDARD = (0x0F, 0x08)  # Public X.509 certificate for standard signing
+	CERT_INTERMEDIATE = (0x0F, 0x11)  # Public X.509 certificate of intermediate certificate authority
 
 
 class DocumentField:
 	ID = 10
 	TYPE = 11
-	TYPE2 = 12
+	SERIAL_NUMBER = 12
 	RELEASE_DATE = 13
 	VALID_UNTIL = 14
 	ISSUER = 15
 	ISSUER_COUNTRY = 9
 	UNKNOWN_FIELD_1 = 16
 	UNKNOWN_FIELD_2 = 17
+	CHIP_SERIAL_NUMBER = 145
+	NAME = 146
 
 
 class PersonalField:
 	PIN = 22
 	LAST_NAME = 23
 	FIRST_NAME = 24
-	MIDDLE_NAME = 25
+	PARENT_NAME = 25
 	SEX = 26
 	BIRTH_PLACE = 27
 	BIRTH_MUNICIPAL = 28
 	BIRTH_COUNTRY = 29
 	BIRTH_COUNTRY_CODE = 31
 	DATE_OF_BIRTH = 30
+	PURPOSE_OF_STAY_OLD = 46  # used when PURPOSE_OF_STAY is missing
+	NATIONALITY = 47
+	PURPOSE_OF_STAY = 147
+	NOTE = 148
 
 
 class ResidenceField:
@@ -64,6 +78,12 @@ class ResidenceField:
 	PLACE = 34
 	STREET = 35
 	NUMBER = 36
+	LETTER = 37
+	ENTRANCE = 38
+	FLOOR = 39
+	APARTMENT = 42
+	ADDRESS_DATE = 44
+	ADDRESS_LABEL = 45
 
 
 class EidCard:
@@ -97,7 +117,7 @@ class EidCard:
 		fields = self.__split_fields(data)
 
 		for name, value in fields.items():
-			fields[name] = scard_util.toASCIIString(value)
+			fields[name] = bytes(value).decode('utf-8', 'replace')
 
 		return fields
 
@@ -108,8 +128,10 @@ class EidCard:
 
 	def get_data_0101(self):
 		"""Get 0101 data and format it"""
+		command = Command.get_data(DataObject.UNKNOWN_0101, 0x20)
+
 		return scard_util.toHexString(
-							self._card.get_data(Command.GET_DATA_0101),
+							self._card.get_data(command),
 							scard_util.PACK
 						)
 
@@ -128,14 +150,44 @@ class EidCard:
 	def get_photo(self):
 		"""Return or save photo from electronic ID"""
 		data = self._card.read_file(CardFile.PHOTO)[1]
-		data = scard_util.toASCIIString(data[4:])
+		return bytes(data[4:])
 
-		return data
+	def __is_qualified(self, certificate):
+		"""Check if certificate key usage allows non repudiation"""
+		position = certificate.find(KEY_USAGE_IDENTIFIER)
+		if position == -1:
+			return False
+
+		position += len(KEY_USAGE_IDENTIFIER)
+
+		# skip optional flag marking extension as critical
+		if certificate[position:position+3] == KEY_USAGE_CRITICAL:
+			position += 3
+
+		# value is bit string wrapped in octet string, two bytes of
+		# header each, followed by number of unused bits and flags
+		flags = certificate[position+5:position+6]
+		if len(flags) == 0:
+			return False
+
+		return flags[0] & KEY_USAGE_NON_REPUDIATION != 0
+
+	def get_certificates(self):
+		"""Get all certificates from card as DER encoded X.509"""
+		return self._card.read_certificates()
 
 	def get_qualified_certificate(self):
-		"""Get qualified certificate data from the card"""
-		pass
+		"""Get certificate for qualified (non repudiation) signing or None"""
+		for certificate in self.get_certificates():
+			if self.__is_qualified(certificate):
+				return certificate
+
+		return None
 
 	def get_certificate(self):
-		"""Get standard certificate data from the card"""
-		pass
+		"""Get certificate for standard signing or None"""
+		for certificate in self.get_certificates():
+			if not self.__is_qualified(certificate):
+				return certificate
+
+		return None

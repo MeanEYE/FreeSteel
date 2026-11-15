@@ -20,24 +20,57 @@
 #		MA 02110-1301, USA.
 
 import smartcard.scard as scard
-from card import Card, GemaltoCard
+
+from freesteel.card import Card, GemaltoCard
+from freesteel.exceptions import GetContextError, ReleaseContextError, GetReaderListError
+from freesteel.exceptions import ConnectCardError, GetReaderStatusError, EmptyReaderListError
+
 from threading import Thread
-from exceptions import GetContextError, ReleaseContextError, GetReaderListError
-from exceptions import ConnectCardError, GetReaderStatusError, EmptyReaderListError
-from smartcard import Session
 
 APOLLO_CARD_ATR = str([
-    0x3B, 0xB9, 0x18, 0x00, 0x81, 0x31, 0xFE,
-    0x9E, 0x80, 0x73, 0xFF, 0x61, 0x40, 0x83,
-    0x00, 0x00, 0x00, 0xDF
+	0x3B, 0xB9, 0x18, 0x00, 0x81, 0x31, 0xFE,
+	0x9E, 0x80, 0x73, 0xFF, 0x61, 0x40, 0x83,
+	0x00, 0x00, 0x00, 0xDF
 ])
 
 GEMALTO_CARD_ATR = str([
-    0x3B, 0xFF, 0x94, 0x00, 0x00, 0x81, 0x31,
-    0x80, 0x43, 0x80, 0x31, 0x80, 0x65, 0xB0,
-    0x85, 0x02, 0x01, 0xF3, 0x12, 0x0F, 0xFF,
-    0x82, 0x90, 0x00, 0x79
+	0x3B, 0xFF, 0x94, 0x00, 0x00, 0x81, 0x31,
+	0x80, 0x43, 0x80, 0x31, 0x80, 0x65, 0xB0,
+	0x85, 0x02, 0x01, 0xF3, 0x12, 0x0F, 0xFF,
+	0x82, 0x90, 0x00, 0x79
 ])
+
+# cards issued since January 2023, replaced soon after
+GEMALTO_2023_CARD_ATR = str([
+	0x3B, 0xF9, 0x96, 0x00, 0x00, 0x80, 0x31,
+	0xFE, 0x45, 0x53, 0x43, 0x45, 0x37, 0x20,
+	0x47, 0x43, 0x4E, 0x33, 0x5E
+])
+
+# cards issued since July 2023
+GEMALTO_2023_2_CARD_ATR = str([
+	0x3B, 0x9E, 0x96, 0x80, 0x31, 0xFE, 0x45,
+	0x53, 0x43, 0x45, 0x20, 0x38, 0x2E, 0x30,
+	0x2D, 0x43, 0x31, 0x56, 0x30, 0x0D, 0x0A,
+	0x6F
+])
+
+# cards issued since June 2024
+GEMALTO_2024_CARD_ATR = str([
+	0x3B, 0x9E, 0x96, 0x80, 0x31, 0xFE, 0x45,
+	0x53, 0x43, 0x45, 0x20, 0x38, 0x2E, 0x30,
+	0x2D, 0x43, 0x32, 0x56, 0x30, 0x0D, 0x0A,
+	0x6C
+])
+
+# newer cards share ATR with other documents, like medical
+# and vehicle cards, which fail when selecting application
+GEMALTO_CARD_ATR_LIST = (
+	GEMALTO_CARD_ATR,
+	GEMALTO_2023_CARD_ATR,
+	GEMALTO_2023_2_CARD_ATR,
+	GEMALTO_2024_CARD_ATR
+)
 
 
 class Reader:
@@ -67,17 +100,6 @@ class Reader:
 		"""Get card interface"""
 		card = None
 
-		session = Session()
-		atr_str = str(session.getATR())
-		session.close()
-
-		if atr_str == APOLLO_CARD_ATR:
-			CardClass = Card
-		elif atr_str == GEMALTO_CARD_ATR:
-			CardClass = GemaltoCard
-		else:
-			raise ConnectCardError('Error connecting to card: UNKNOWN CARD')
-
 		# try connecting reader
 		result, self.__hcard, self.active_protocol = scard.SCardConnect(
 															self.context,
@@ -90,9 +112,33 @@ class Reader:
 			message = scard.SCardGetErrorMessage(result)
 			raise ConnectCardError('Error connecting to card: {0}'.format(message))
 
+		# get ATR of the card in this reader
+		result, reader, state, protocol, atr = scard.SCardStatus(self.__hcard)
+
+		if result != scard.SCARD_S_SUCCESS:
+			# failed getting card status
+			message = scard.SCardGetErrorMessage(result)
+			scard.SCardDisconnect(self.__hcard, scard.SCARD_LEAVE_CARD)
+			raise ConnectCardError('Error connecting to card: {0}'.format(message))
+
+		atr_str = str(list(atr))
+
+		if atr_str == APOLLO_CARD_ATR:
+			CardClass = Card
+		elif atr_str in GEMALTO_CARD_ATR_LIST:
+			CardClass = GemaltoCard
 		else:
-			# create card class and return it
+			scard.SCardDisconnect(self.__hcard, scard.SCARD_LEAVE_CARD)
+			raise ConnectCardError('Error connecting to card: UNKNOWN CARD')
+
+		# create card class and return it
+		try:
 			card = CardClass(self.__hcard, self.active_protocol)
+
+		except Exception:
+			# card didn't accept initial commands
+			scard.SCardDisconnect(self.__hcard, scard.SCARD_LEAVE_CARD)
+			raise
 
 		return card
 

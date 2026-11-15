@@ -19,7 +19,7 @@
 #		Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #		MA 02110-1301, USA.
 
-from reader import Reader
+from freesteel.reader import Reader
 
 
 def get_reader_list():
