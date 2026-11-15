@@ -24,16 +24,21 @@ import smartcard.util as scard_util
 from freesteel.card import Command, DataObject
 
 
+# bytes used for finding key usage inside of certificate, which
+# tells what the certificate is allowed to be used for
 KEY_USAGE_IDENTIFIER = bytes([0x06, 0x03, 0x55, 0x1D, 0x0F])  # object identifier 2.5.29.15
-KEY_USAGE_CRITICAL = bytes([0x01, 0x01, 0xFF])
-KEY_USAGE_NON_REPUDIATION = 0x40
+KEY_USAGE_CRITICAL = bytes([0x01, 0x01, 0xFF])  # flag saying usage must not be ignored
+KEY_USAGE_NON_REPUDIATION = 0x40  # bit set when signatures can't be denied later
 
 
+# files on card, each identified with two bytes. these are not part of
+# any standard, they were chosen by issuer of the card and are known
+# only from other open source projects reading the same card
 class CardFile:
-	DOCUMENT = (0x0F, 0x02)  # Document data
-	PERSONAL = (0x0F, 0x03)  # Personal data
-	RESIDENCE = (0x0F, 0x04)  # Place of residence, variable length
-	PHOTO = (0x0F, 0x06)  # Personal photo in JPEG format
+	DOCUMENT = (0x0F, 0x02)
+	PERSONAL = (0x0F, 0x03)
+	RESIDENCE = (0x0F, 0x04)
+	PHOTO = (0x0F, 0x06)
 
 	# certificates on Apollo cards, Gemalto cards keep them in cryptography application
 	CERT_QUALIFIED = (0x0F, 0x10)  # Public X.509 certificate for qualified (Non Repudiation) signing
@@ -41,6 +46,12 @@ class CardFile:
 	CERT_INTERMEDIATE = (0x0F, 0x11)  # Public X.509 certificate of intermediate certificate authority
 
 
+# files with data are made of fields, each marked with a number. classes
+# below name the numbers found in each file. not all fields exist on
+# all cards, so their presence should be checked before use
+
+
+# fields in file with data about the document itself
 class DocumentField:
 	ID = 10
 	TYPE = 11
@@ -55,6 +66,7 @@ class DocumentField:
 	NAME = 146
 
 
+# fields in file with data about person document was issued to
 class PersonalField:
 	PIN = 22
 	LAST_NAME = 23
@@ -72,6 +84,7 @@ class PersonalField:
 	NOTE = 148
 
 
+# fields in file with address of the person
 class ResidenceField:
 	COUNTRY_CODE = 32
 	MUNICIPAL = 33
@@ -90,11 +103,20 @@ class EidCard:
 	"""Wrapper class used for reading electronic ID cards"""
 
 	def __init__(self, card):
+		# card object does the communication, this class
+		# only knows where data is and how to read it
 		self._card = card
 
 	def __split_fields(self, data):
 		"""Split fields and return dictionary"""
 		result = {}
+
+		# file is made of fields placed one after the other:
+		#
+		#	number (2 bytes), length (2 bytes), value (length bytes)
+		#
+		# both number and length have lower byte first. only that byte
+		# is used here, which limits value to 255 bytes
 
 		# split fields
 		position = 0
@@ -116,6 +138,8 @@ class EidCard:
 		"""Get fields in human readable format"""
 		fields = self.__split_fields(data)
 
+		# values are text encoded as UTF-8, bytes which are
+		# not valid are replaced instead of failing whole file
 		for name, value in fields.items():
 			fields[name] = bytes(value).decode('utf-8', 'replace')
 
@@ -123,11 +147,14 @@ class EidCard:
 
 	def __get_fields_from_file(self, card_file):
 		"""Get fields from binary file and format them"""
+		# file header is not needed, only its content
 		data = self._card.read_file(card_file)[1]
 		return self.__get_fields(data)
 
 	def get_data_0101(self):
 		"""Get 0101 data and format it"""
+		# meaning of this data is unknown, command comes from old
+		# cards and is rejected by newer Gemalto ones
 		command = Command.get_data(DataObject.UNKNOWN_0101, 0x20)
 
 		return scard_util.toHexString(
@@ -150,10 +177,14 @@ class EidCard:
 	def get_photo(self):
 		"""Return or save photo from electronic ID"""
 		data = self._card.read_file(CardFile.PHOTO)[1]
+
+		# content starts with four more bytes of header, rest is JPEG image
 		return bytes(data[4:])
 
 	def __is_qualified(self, certificate):
 		"""Check if certificate key usage allows non repudiation"""
+		# certificate is not parsed, key usage is instead located by
+		# searching for its identifier to avoid depending on other libraries
 		position = certificate.find(KEY_USAGE_IDENTIFIER)
 		if position == -1:
 			return False
@@ -178,6 +209,8 @@ class EidCard:
 
 	def get_qualified_certificate(self):
 		"""Get certificate for qualified (non repudiation) signing or None"""
+		# card doesn't tell which certificate is which, so they
+		# are told apart by what they are allowed to be used for
 		for certificate in self.get_certificates():
 			if self.__is_qualified(certificate):
 				return certificate

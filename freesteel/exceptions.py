@@ -30,3 +30,5 @@ class GetDataError(Exception): pass
 class SelectPathError(Exception): pass
 class ConnectCardError(Exception): pass
 class DisconnectCardError(Exception): pass
+
+class VerificationError(Exception): pass
