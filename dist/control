@@ -1,0 +1,12 @@
+Package: freesteel
+Version: @version@
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-gi, python3-gi-cairo, python3-cairo, python3-pyscard,
+	python3-cryptography (>= 42), gir1.2-gtk-4.0, gir1.2-adw-1,
+	gir1.2-gdkpixbuf-2.0, pcscd
+Recommends: libccid
+Maintainer: @packager@
+Installed-Size: @size@
+Description: Reader for electronic ID cards of the Republic of Serbia.

@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+import sys
+import runpy
+
+# interface is not installed among other Python packages
+sys.path.insert(0, '/usr/share/freesteel')
+
+runpy.run_module('interface', run_name='__main__', alter_sys=True)
