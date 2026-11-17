@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Icon=org.freesteel.FreeSteel
+Name=FreeSteel
+GenericName=Electronic ID Card Reader
+GenericName[sr]=Читач електронске личне карте
+GenericName[sr@latin]=Čitač elektronske lične karte
+Comment=Read and print data from electronic ID card
+Comment[sr]=Читање и штампа података са електронске личне карте
+Comment[sr@latin]=Čitanje i štampa podataka sa elektronske lične karte
+Categories=Utility;GTK;
+Keywords=id;card;smartcard;eid;licna;karta;
+Exec=freesteel
+Terminal=false
+StartupNotify=true
