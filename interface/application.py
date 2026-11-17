@@ -19,7 +19,7 @@
 #		Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #		MA 02110-1301, USA.
 
-from gi.repository import Adw, Gio
+from gi.repository import Adw, Gio, Gtk
 
 from interface.card_monitor import CardMonitor
 from interface.main_window import MainWindow
@@ -39,6 +39,9 @@ class Application(Adw.Application):
 
 		self._window = None
 		self._monitor = None
+
+		# icon is installed under the same name as application
+		Gtk.Window.set_default_icon_name(self.ID)
 
 		# connect signals
 		self.connect('activate', self._handle_activate)

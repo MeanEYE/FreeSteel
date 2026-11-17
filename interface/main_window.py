@@ -139,6 +139,15 @@ class MainWindow(Adw.ApplicationWindow):
 
 	TITLE = 'FreeSteel'
 	DEFAULT_SIZE = (650, 700)
+
+	# version is read from here by Makefile, keep one value per line
+	VERSION = {
+		'major': 0,
+		'minor': 1,
+		'build': 1,
+		'stage': 'f'
+	}
+
 	ACTION_PRINT_LEGACY = 'print-legacy'
 
 	def __init__(self, application):

@@ -20,6 +20,7 @@
 #		MA 02110-1301, USA.
 
 import os
+import pkgutil
 import hashlib
 import datetime
 
@@ -51,7 +52,7 @@ class CertificateChecker:
 
 	# certificates of authorities issuing certificates found on cards, published
 	# by ministry at https://ca.mup.gov.rs/ca/ca_lat/start/ca_crl/
-	AUTHORITIES_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authorities')
+	AUTHORITIES_DIRECTORY = 'authorities'
 	TRUSTED_FILES = ('MUPRootCA4.crt',)
 	INTERMEDIATE_FILES = ('MUPGradjaniCA4.crt', 'MUPStranciCA4.crt')
 
@@ -63,8 +64,9 @@ class CertificateChecker:
 
 	def __read_authority(self, file_name):
 		"""Read certificate of authority which comes with the program"""
-		with open(os.path.join(self.AUTHORITIES_DIRECTORY, file_name), 'rb') as raw_file:
-			return raw_file.read()
+		# files are read through package they are in, since program
+		# can be started from single file where they can't be opened
+		return pkgutil.get_data('interface', '{0}/{1}'.format(self.AUTHORITIES_DIRECTORY, file_name))
 
 	def __create_verifier(self):
 		"""Create verifier knowing all authorities"""
